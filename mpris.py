@@ -162,7 +162,12 @@ if __name__ == "__main__":
         if status == 'Playing' or status == 'Paused':
             meta = service.get_player_property('Metadata')
             pos = service.get_player_property('Position')
+            # length might not be defined, e.g. in case of a live stream
             length = meta.get('mpris:length')
+            len_str = ''
+            if length:
+                len_str = "(%s/%s)" % (track_length_string(pos),
+                                       track_length_string(length))
             title = meta.get('xesam:title') or meta.get('xesam:url')
             artist = '[Unknown]'
             artists = meta.get('xesam:artist')
@@ -171,9 +176,8 @@ if __name__ == "__main__":
                 artist = artists.popleft()
                 while len(artists) > 0:
                     artist = artist + ', ' + artists.popleft()
-            print("%s: \"%s\" by %s (%s/%s)"
-                  % (status, title, artist, track_length_string(pos),
-                     track_length_string(length)))
+            print("%s: \"%s\" by %s %s"
+                  % (status, title, artist, len_str))
             if args.verbose:
                 print('Raw metadata listing:')
                 for k in meta.keys():
