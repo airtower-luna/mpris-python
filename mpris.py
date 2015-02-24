@@ -95,10 +95,12 @@ def track_length_string(length):
     s = int(length / 1000000)
     minutes = int(s / 60)
     s = s - minutes * 60
-    if (us != 0):
+    if us != 0:
         return "%d:%02d.%03d%03d" % (minutes, s, ms, us)
-    else:
+    elif ms != 0:
         return "%d:%02d.%03d" % (minutes, s, ms)
+    else:
+        return "%d:%02d" % (minutes, s)
 
 def _list_commands():
     print("The following commands are supported:")
