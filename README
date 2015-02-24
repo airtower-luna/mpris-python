@@ -17,10 +17,14 @@ positional arguments:
   args               arguments for the command, if any
 
 optional arguments:
-  -h, --help         show this help message and exit
-  -s N, --service N  use the Nth MPRIS2 service available (default: 0)
-  -v, --verbose      enable extra output
-  --commands         list supported commands, then exit
+  -h, --help            show this help message and exit
+  -s SERVICE, --service SERVICE
+                        Access the specified service, either by number as
+                        provided by the "services" command, or by name. Names
+                        are matched from the end, so the last part is enough.
+                        default: 0
+  -v, --verbose         enable extra output, useful for debugging
+  --commands            list supported commands, then exit
 
 Supported commands are:
   status    show player status

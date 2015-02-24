@@ -123,12 +123,13 @@ if __name__ == "__main__":
                         nargs="?", default="status")
     parser.add_argument("args", help='arguments for the command, if any',
                         nargs="*")
-    parser.add_argument("-s", "--service", metavar='N',
-                        help='use the Nth MPRIS2 service available '
-                        '(default: 0)',
-                        type=int, default=0)
+    parser.add_argument("-s", "--service",
+                        help='Access the specified service, either by number '
+                        'as provided by the "services" command, or by name. '
+                        'Names are matched from the end, so the last part is '
+                        'enough. default: 0', default='0')
     parser.add_argument("-v", "--verbose", action="store_true",
-                        help='enable extra output')
+                        help='enable extra output, useful for debugging')
     parser.add_argument("--commands", action="store_true",
                         help='list supported commands, then exit')
     args = parser.parse_args()
@@ -138,9 +139,10 @@ if __name__ == "__main__":
         exit(0)
 
     # if the command is "services", list services available via dbus and exit
+    services = get_services()
     if (args.command == "services"):
         i = 0
-        for s in get_services():
+        for s in services:
             print("  %d: %s" % (i, s))
             i = i + 1
         exit(0)
@@ -148,15 +150,23 @@ if __name__ == "__main__":
     # try to access the service via dbus
     service = None
     try:
-        s = get_services()[args.service]
-        service = MprisService(s)
-        if args.verbose:
-            print("selected service", service.name)
-            print("  playlists support:\t%s" % (service.playlists != None))
-            print("  tracklist support:\t%s" % (service.tracklist != None))
+        no = int(args.service)
+        service = MprisService(services[no])
     except IndexError:
-        print("MPRIS2 service no. %d not found." % args.service)
+        print("MPRIS2 service no. %d not found." % no)
         exit(1)
+    except ValueError:
+        # no number provided, try name matching
+        for s in services:
+            if s.endswith(args.service):
+                service = MprisService(s)
+        if not service:
+            print("MPRIS2 service \"%s\" not found." % args.service)
+            exit(1)
+    if args.verbose:
+        print("selected service", service.name)
+        print("  playlists support:\t%s" % (service.playlists != None))
+        print("  tracklist support:\t%s" % (service.tracklist != None))
 
     # regular commands: run and exit
     if (args.command == "status"):
