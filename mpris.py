@@ -79,6 +79,7 @@ def get_services():
     :returns: a list of strings
     """
     services = []
+    bus = dbus.SessionBus()
     for s in bus.list_names():
         if s.startswith(MprisService.mpris_base):
             services.append(s)
@@ -137,7 +138,6 @@ if __name__ == "__main__":
         exit(0)
 
     # if the command is "services", list services available via dbus and exit
-    bus = dbus.SessionBus()
     if (args.command == "services"):
         i = 0
         for s in get_services():
