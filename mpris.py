@@ -110,6 +110,8 @@ def _list_commands():
     print("\tstop\tstop playback")
     print("\tplay\tstart playback")
     print("\tpause\tpause playback")
+    print("\tnext\tplay next track")
+    print("\tprev[ious]\tplay previous track")
     print("\topen URI\topen media from URI and playback")
 
 
