@@ -202,6 +202,11 @@ if __name__ == "__main__":
         else:
             print(status)
 
+    # check if the player allows control commands before attempting any
+    elif not service.get_player_property('CanControl'):
+        print("Player %s does not provide control access." % (service.name))
+        exit(1)
+
     elif (args.command == "toggle"):
         if service.get_player_property('CanPause'):
             service.player.PlayPause()
