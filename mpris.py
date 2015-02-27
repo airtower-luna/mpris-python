@@ -171,7 +171,13 @@ if __name__ == "__main__":
         print("player properties:")
         prop = service.player_properties()
         for s in prop.keys():
-            print("  %s = %s" % (s, prop.get(s)))
+            if s == 'Metadata':
+                print('  current track metadata:')
+                meta = prop.get(s)
+                for k in meta.keys():
+                    print("    %s\t= %s" % (k, meta.get(k)))
+            else:
+                print("  %s\t= %s" % (s, prop.get(s)))
 
     # regular commands: run and exit
     if (args.command == "status"):
@@ -195,10 +201,6 @@ if __name__ == "__main__":
                     artist = artist + ', ' + artists.popleft()
             print("%s: \"%s\" by %s %s"
                   % (status, title, artist, len_str))
-            if args.verbose:
-                print('Raw metadata listing:')
-                for k in meta.keys():
-                    print("  %s\t= %s" % (k, meta.get(k)))
         else:
             print(status)
 
