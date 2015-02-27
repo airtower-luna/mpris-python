@@ -163,10 +163,15 @@ if __name__ == "__main__":
         if not service:
             print("MPRIS2 service \"%s\" not found." % args.service)
             exit(1)
+
     if args.verbose:
         print("selected service", service.name)
         print("  playlists support:\t%s" % (service.playlists != None))
         print("  tracklist support:\t%s" % (service.tracklist != None))
+        print("player properties:")
+        prop = service.player_properties()
+        for s in prop.keys():
+            print("  %s = %s" % (s, prop.get(s)))
 
     # regular commands: run and exit
     if (args.command == "status"):
