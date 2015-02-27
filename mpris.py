@@ -201,24 +201,46 @@ if __name__ == "__main__":
                     print("  %s\t= %s" % (k, meta.get(k)))
         else:
             print(status)
+
     elif (args.command == "toggle"):
-        print("toggling play/pause state")
-        service.player.PlayPause()
+        if service.get_player_property('CanPause'):
+            service.player.PlayPause()
+        else:
+            print("not supported")
+            exit(2)
+
     elif (args.command == "stop"):
-        print("stopping playback")
+        # for some reason, there's no 'CanStop' property
         service.player.Stop()
+
     elif (args.command == "play"):
-        print("starting playback")
-        service.player.Play()
+        if service.get_player_property('CanPlay'):
+            service.player.Play()
+        else:
+            print("not supported")
+            exit(2)
+
     elif (args.command == "next"):
-        print("playing next track")
-        service.player.Next()
+        if service.get_player_property('CanGoNext'):
+            service.player.Next()
+        else:
+            print("not supported")
+            exit(2)
+
     elif (args.command == "prev" or args.command == "previous"):
-        print("playing previous track")
-        service.player.Previous()
+        if service.get_player_property('CanGoPrevious'):
+            service.player.Previous()
+        else:
+            print("not supported")
+            exit(2)
+
     elif (args.command == "pause"):
-        print("pausing playback")
-        service.player.Pause()
+        if service.get_player_property('CanPause'):
+            service.player.Pause()
+        else:
+            print("not supported")
+            exit(2)
+
     elif (args.command == "open"):
         try:
             print("opening %s" % (args.args[0]))
@@ -230,6 +252,7 @@ if __name__ == "__main__":
             else:
                 print('Unexpected error:', ex)
             exit(1)
+
     else:
         print("unknown command:", args.command)
         exit(1)
