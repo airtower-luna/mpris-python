@@ -205,6 +205,12 @@ if __name__ == "__main__":
     elif (args.command == "play"):
         print("starting playback")
         service.player.Play()
+    elif (args.command == "next"):
+        print("playing next track")
+        service.player.Next()
+    elif (args.command == "prev" or args.command == "previous"):
+        print("playing previous track")
+        service.player.Previous()
     elif (args.command == "pause"):
         print("pausing playback")
         service.player.Pause()
