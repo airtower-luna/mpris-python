@@ -114,6 +114,24 @@ def _list_commands():
     print("\tprev[ious]\tplay previous track")
     print("\topen URI\topen media from URI and playback")
 
+def _open_service(services, select):
+    # try to open a service from the given list "services" by number
+    # or dbus name in "select"
+    service = None
+    try:
+        no = int(select)
+        service = MprisService(services[no])
+    except IndexError:
+        print("MPRIS2 service no. %d not found." % no)
+    except ValueError:
+        # no number provided, try name matching
+        for s in services:
+            if s.endswith(select):
+                service = MprisService(s)
+        if service == None:
+            print("MPRIS2 service \"%s\" not found." % args.service)
+    return service
+
 
 
 if __name__ == "__main__":
@@ -150,21 +168,9 @@ if __name__ == "__main__":
         exit(0)
 
     # try to access the service via dbus
-    service = None
-    try:
-        no = int(args.service)
-        service = MprisService(services[no])
-    except IndexError:
-        print("MPRIS2 service no. %d not found." % no)
+    service = _open_service(services, args.service)
+    if not service:
         exit(1)
-    except ValueError:
-        # no number provided, try name matching
-        for s in services:
-            if s.endswith(args.service):
-                service = MprisService(s)
-        if not service:
-            print("MPRIS2 service \"%s\" not found." % args.service)
-            exit(1)
 
     if args.verbose:
         print("selected service", service.name)
