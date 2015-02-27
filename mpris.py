@@ -60,6 +60,9 @@ class MprisService:
         except dbus.exceptions.DBusException:
             self.tracklist = None
 
+    def base_properties(self):
+        """Get all basic service properties"""
+        return self.properties.GetAll(self.mpris_base)
     def player_properties(self):
         """Get all player properties"""
         return self.properties.GetAll(self.player_interface)
@@ -163,7 +166,14 @@ if __name__ == "__main__":
     if (args.command == "services"):
         i = 0
         for s in services:
-            print("  %d: %s" % (i, s))
+            print("%d: %s" % (i, s))
+            if args.verbose:
+                service = _open_service(services, s)
+                print("  playlists support:\t%s" % (service.playlists != None))
+                print("  tracklist support:\t%s" % (service.tracklist != None))
+                prop = service.base_properties()
+                for s in prop.keys():
+                    print("  %s\t= %s" % (s, prop.get(s)))
             i = i + 1
         exit(0)
 
@@ -176,6 +186,9 @@ if __name__ == "__main__":
         print("selected service", service.name)
         print("  playlists support:\t%s" % (service.playlists != None))
         print("  tracklist support:\t%s" % (service.tracklist != None))
+        prop = service.base_properties()
+        for s in prop.keys():
+            print("  %s\t= %s" % (s, prop.get(s)))
         print("player properties:")
         prop = service.player_properties()
         for s in prop.keys():
