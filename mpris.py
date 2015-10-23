@@ -115,7 +115,7 @@ def _list_commands():
     print("\tpause\tpause playback")
     print("\tnext\tplay next track")
     print("\tprev[ious]\tplay previous track")
-    print("\topen URI\topen media from URI and playback")
+    print("\topen URI\topen media from URI and start playback")
     print("\tservices\tlist available players")
 
 def _open_service(services, select):
