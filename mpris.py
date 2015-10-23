@@ -116,6 +116,7 @@ def _list_commands():
     print("\tnext\tplay next track")
     print("\tprev[ious]\tplay previous track")
     print("\topen URI\topen media from URI and playback")
+    print("\tservices\tlist available players")
 
 def _open_service(services, select):
     # try to open a service from the given list "services" by number
