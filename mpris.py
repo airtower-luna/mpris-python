@@ -141,7 +141,8 @@ def _open_service(services, select):
 if __name__ == "__main__":
     import argparse
     from collections import deque
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Manage an MPRIS2 "
+                                     "compatible music player")
     parser.add_argument("command",
                         help='player command to execute, default: "status"',
                         nargs="?", default="status")
