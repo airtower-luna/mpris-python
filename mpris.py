@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# PYTHON_ARGCOMPLETE_OK
 """command line client for MPRIS2 compatible media players"""
 
 # The MIT License (MIT)
@@ -145,7 +146,9 @@ if __name__ == "__main__":
                                      "compatible music player")
     parser.add_argument("command",
                         help='player command to execute, default: "status"',
-                        nargs="?", default="status")
+                        nargs="?", default="status",
+                        choices=('status', 'toggle', 'stop', 'play', 'pause',
+                                 'next', 'prev', 'open', 'services'))
     parser.add_argument("args", help='arguments for the command, if any',
                         nargs="*")
     parser.add_argument("-s", "--service",
@@ -157,6 +160,14 @@ if __name__ == "__main__":
                         help='enable extra output, useful for debugging')
     parser.add_argument("--commands", action="store_true",
                         help='list supported commands, then exit')
+
+    # enable bash completion if argcomplete is available
+    try:
+        import argcomplete
+        argcomplete.autocomplete(parser)
+    except ImportError:
+        pass
+
     args = parser.parse_args()
 
     if (args.commands):
