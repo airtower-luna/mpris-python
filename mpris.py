@@ -4,7 +4,7 @@
 
 # The MIT License (MIT)
 #
-# Copyright (c) 2015 Fiona Klute
+# Copyright (c) 2015-2020 Fiona Klute
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -142,6 +142,10 @@ def _open_service(services, select):
 if __name__ == "__main__":
     import argparse
     from collections import deque
+
+    # get available services via dbus
+    services = get_services()
+
     parser = argparse.ArgumentParser(description="Manage an MPRIS2 "
                                      "compatible music player")
     parser.add_argument("command",
@@ -151,11 +155,11 @@ if __name__ == "__main__":
                                  'next', 'prev', 'open', 'services'))
     parser.add_argument("args", help='arguments for the command, if any',
                         nargs="*")
-    parser.add_argument("-s", "--service",
-                        help='Access the specified service, either by number '
-                        'as provided by the "services" command, or by name. '
-                        'Names are matched from the end, so the last part is '
-                        'enough. default: 0', default='0')
+    service_arg = parser.add_argument(
+        '-s', '--service', default=services[0],
+        help='Access the specified service, either by number as provided '
+        'by the "services" command, or by name. Names are matched from the '
+        f'end, so the last part is enough. default: {services[0]}')
     parser.add_argument("-v", "--verbose", action="store_true",
                         help='enable extra output, useful for debugging')
     parser.add_argument("--commands", action="store_true",
@@ -164,6 +168,8 @@ if __name__ == "__main__":
     # enable bash completion if argcomplete is available
     try:
         import argcomplete
+        from argcomplete.completers import ChoicesCompleter
+        service_arg.completer = ChoicesCompleter(services)
         argcomplete.autocomplete(parser)
     except ImportError:
         pass
@@ -174,8 +180,7 @@ if __name__ == "__main__":
         _list_commands()
         exit(0)
 
-    # if the command is "services", list services available via dbus and exit
-    services = get_services()
+    # if the command is "services", list available services and exit
     if (args.command == "services"):
         i = 0
         for s in services:
