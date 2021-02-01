@@ -4,7 +4,7 @@
 
 # The MIT License (MIT)
 #
-# Copyright (c) 2015-2020 Fiona Klute
+# Copyright (c) 2015-2021 Fiona Klute
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 # SOFTWARE.
 
 import dbus
+import sys
 
 class MprisService:
     """Class representing an MPRIS2 compatible media player"""
@@ -223,13 +224,23 @@ if __name__ == "__main__":
         status = service.get_player_property('PlaybackStatus')
         if status == 'Playing' or status == 'Paused':
             meta = service.get_player_property('Metadata')
-            pos = service.get_player_property('Position')
+            try:
+                pos = service.get_player_property('Position')
+            except dbus.exceptions.DBusException as ex:
+                if ex.get_dbus_name() \
+                   == 'org.freedesktop.DBus.Error.NotSupported':
+                    # player doesn't suport position request
+                    pos = None
+                else:
+                    print('Error while retrieving playback position!',
+                          file=sys.stderr)
+                    raise
             # length might not be defined, e.g. in case of a live stream
             length = meta.get('mpris:length')
             len_str = ''
             if length:
-                len_str = "(%s/%s)" % (track_length_string(pos),
-                                       track_length_string(length))
+                pos_str = track_length_string(pos) if pos else '???'
+                len_str = f'({pos_str}/{track_length_string(length)})'
             title = meta.get('xesam:title') or meta.get('xesam:url')
             artist = '[Unknown]'
             artists = meta.get('xesam:artist')
