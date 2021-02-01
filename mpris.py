@@ -13,8 +13,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -27,6 +27,7 @@
 import dbus
 import sys
 
+
 class MprisService:
     """Class representing an MPRIS2 compatible media player"""
 
@@ -34,7 +35,7 @@ class MprisService:
     player_interface = mpris_base + '.Player'
     tracklist_interface = mpris_base + '.TrackList'
     playlists_interface = mpris_base + '.Playlists'
-    # see http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-properties
+    # see http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-properties # noqa
     properties_interface = 'org.freedesktop.DBus.Properties'
 
     def __init__(self, servicename):
@@ -42,16 +43,16 @@ class MprisService:
         bus = dbus.SessionBus()
         self.name = servicename
         self.proxy = bus.get_object(self.name, '/org/mpris/MediaPlayer2')
-        self.player = dbus.Interface(self.proxy,
-                                     dbus_interface=self.player_interface)
+        self.player = dbus.Interface(
+            self.proxy, dbus_interface=self.player_interface)
         # tracklist is an optional interface, may be None depending on service
-        self.tracklist = dbus.Interface(self.proxy,
-                                        dbus_interface=self.tracklist_interface)
+        self.tracklist = dbus.Interface(
+            self.proxy, dbus_interface=self.tracklist_interface)
         # playlists is an optional interface, may be None depending on service
-        self.playlists = dbus.Interface(self.proxy,
-                                        dbus_interface=self.playlists_interface)
-        self.properties = dbus.Interface(self.proxy,
-                                         dbus_interface=self.properties_interface)
+        self.playlists = dbus.Interface(
+            self.proxy, dbus_interface=self.playlists_interface)
+        self.properties = dbus.Interface(
+            self.proxy, dbus_interface=self.properties_interface)
         # check if optional interfaces are available
         try:
             self.get_playlists_property('PlaylistCount')
@@ -65,18 +66,23 @@ class MprisService:
     def base_properties(self):
         """Get all basic service properties"""
         return self.properties.GetAll(self.mpris_base)
+
     def player_properties(self):
         """Get all player properties"""
         return self.properties.GetAll(self.player_interface)
+
     def get_player_property(self, name):
         """Get the player property described by name"""
         return self.properties.Get(self.player_interface, name)
+
     def get_playlists_property(self, name):
         """Get the playlists property described by name"""
         return self.properties.Get(self.playlists_interface, name)
+
     def get_tracklist_property(self, name):
         """Get the tracklist property described by name"""
         return self.properties.Get(self.tracklist_interface, name)
+
 
 def get_services():
     """Get the list of available MPRIS2 services
@@ -89,6 +95,7 @@ def get_services():
         if s.startswith(MprisService.mpris_base):
             services.append(s)
     return services
+
 
 def track_length_string(length):
     """Convert track length in microseconds into human readable format
@@ -108,6 +115,7 @@ def track_length_string(length):
     else:
         return "%d:%02d" % (minutes, s)
 
+
 def _list_commands():
     print("The following commands are supported:")
     print("\tstatus\tshow player status")
@@ -119,6 +127,7 @@ def _list_commands():
     print("\tprev[ious]\tplay previous track")
     print("\topen URI\topen media from URI and start playback")
     print("\tservices\tlist available players")
+
 
 def _open_service(services, select):
     # try to open a service from the given list "services" by number
@@ -137,7 +146,6 @@ def _open_service(services, select):
         if service is None:
             print("MPRIS2 service \"%s\" not found." % args.service)
     return service
-
 
 
 if __name__ == "__main__":
