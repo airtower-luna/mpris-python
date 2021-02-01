@@ -137,14 +137,14 @@ def _open_service(services, select):
         no = int(select)
         service = MprisService(services[no])
     except IndexError:
-        print("MPRIS2 service no. %d not found." % no)
+        print(f'MPRIS2 service no. {no} not found.')
     except ValueError:
         # no number provided, try name matching
         for s in services:
             if s.endswith(select):
                 service = MprisService(s)
         if service is None:
-            print("MPRIS2 service \"%s\" not found." % args.service)
+            print(f'MPRIS2 service "{args.service}" not found.')
     return service
 
 
@@ -191,17 +191,15 @@ if __name__ == "__main__":
 
     # if the command is "services", list available services and exit
     if (args.command == "services"):
-        i = 0
-        for s in services:
-            print("%d: %s" % (i, s))
+        for i, s in enumerate(services):
+            print(f'{i}: {s}')
             if args.verbose:
                 service = _open_service(services, s)
                 print(f'  playlists support:\t{bool(service.playlists)}')
                 print(f'  tracklist support:\t{bool(service.tracklist)}')
                 prop = service.base_properties()
                 for s in prop.keys():
-                    print("  %s\t= %s" % (s, prop.get(s)))
-            i = i + 1
+                    print(f'  {s}\t= {prop.get(s)}')
         exit(0)
 
     # try to access the service via dbus
@@ -215,17 +213,16 @@ if __name__ == "__main__":
         print(f'  tracklist support:\t{bool(service.tracklist)}')
         prop = service.base_properties()
         for s in prop.keys():
-            print("  %s\t= %s" % (s, prop.get(s)))
+            print(f'  {s}\t= {prop.get(s)}')
         print("player properties:")
         prop = service.player_properties()
-        for s in prop.keys():
-            if s == 'Metadata':
+        for k, v in prop.items():
+            if k == 'Metadata':
                 print('  current track metadata:')
-                meta = prop.get(s)
-                for k in meta.keys():
-                    print("    %s\t= %s" % (k, meta.get(k)))
+                for mk, mv in v.items():
+                    print(f'    {mk}\t= {mv}')
             else:
-                print("  %s\t= %s" % (s, prop.get(s)))
+                print(f'  {k}\t= {v}')
 
     # regular commands: run and exit
     if (args.command == "status"):
@@ -257,14 +254,13 @@ if __name__ == "__main__":
                 artist = artists.popleft()
                 while len(artists) > 0:
                     artist = artist + ', ' + artists.popleft()
-            print("%s: \"%s\" by %s %s"
-                  % (status, title, artist, len_str))
+            print(f'{status}: "{title}" by {artist} {len_str}')
         else:
             print(status)
 
     # check if the player allows control commands before attempting any
     elif not service.get_player_property('CanControl'):
-        print("Player %s does not provide control access." % (service.name))
+        print(f'Player {service.name} does not provide control access.')
         exit(1)
 
     elif (args.command == "toggle"):
@@ -308,12 +304,12 @@ if __name__ == "__main__":
 
     elif (args.command == "open"):
         try:
-            print("opening %s" % (args.args[0]))
+            print(f'opening {args.args[0]}')
             service.player.OpenUri(args.args[0])
         except dbus.exceptions.DBusException as ex:
             if (ex.get_dbus_name().endswith('UnknownMethod')):
-                print("Error: Service %s does not support opening URIs via "
-                      "MPRIS2." % (service.name))
+                print(f'Error: Service {service.name} does not support '
+                      'opening URIs via MPRIS2.')
             else:
                 print('Unexpected error:', ex)
             exit(1)
