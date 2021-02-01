@@ -134,7 +134,7 @@ def _open_service(services, select):
         for s in services:
             if s.endswith(select):
                 service = MprisService(s)
-        if service == None:
+        if service is None:
             print("MPRIS2 service \"%s\" not found." % args.service)
     return service
 
@@ -188,8 +188,8 @@ if __name__ == "__main__":
             print("%d: %s" % (i, s))
             if args.verbose:
                 service = _open_service(services, s)
-                print("  playlists support:\t%s" % (service.playlists != None))
-                print("  tracklist support:\t%s" % (service.tracklist != None))
+                print(f'  playlists support:\t{bool(service.playlists)}')
+                print(f'  tracklist support:\t{bool(service.tracklist)}')
                 prop = service.base_properties()
                 for s in prop.keys():
                     print("  %s\t= %s" % (s, prop.get(s)))
@@ -203,8 +203,8 @@ if __name__ == "__main__":
 
     if args.verbose:
         print("selected service", service.name)
-        print("  playlists support:\t%s" % (service.playlists != None))
-        print("  tracklist support:\t%s" % (service.tracklist != None))
+        print(f'  playlists support:\t{bool(service.playlists)}')
+        print(f'  tracklist support:\t{bool(service.tracklist)}')
         prop = service.base_properties()
         for s in prop.keys():
             print("  %s\t= %s" % (s, prop.get(s)))
