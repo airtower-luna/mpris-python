@@ -26,6 +26,7 @@
 
 import dbus
 import sys
+from datetime import timedelta
 
 
 class MprisService:
@@ -103,17 +104,7 @@ def track_length_string(length):
     :param length: track length in microseconds
     :returns: formatted string
     """
-    us = length % 1000
-    ms = int((length / 1000) % 1000)
-    s = int(length / 1000000)
-    minutes = int(s / 60)
-    s = s - minutes * 60
-    if us != 0:
-        return "%d:%02d.%03d%03d" % (minutes, s, ms, us)
-    elif ms != 0:
-        return "%d:%02d.%03d" % (minutes, s, ms)
-    else:
-        return "%d:%02d" % (minutes, s)
+    return str(timedelta(microseconds=length))
 
 
 def _list_commands():
