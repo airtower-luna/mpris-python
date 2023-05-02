@@ -28,6 +28,12 @@ import gi.repository
 import pydbus
 import sys
 from datetime import timedelta
+from pathlib import Path
+
+
+class UnsupportedOperation(Exception):
+    """Raised when calling an MPRIS operation the player does not support."""
+    pass
 
 
 class MprisService:
@@ -66,6 +72,58 @@ class MprisService:
         """Get all player properties"""
         return self.properties.GetAll(self.player_interface)
 
+    def _assert_control(self):
+        if not self.player.CanControl:
+            raise UnsupportedOperation(
+                f'{self.name} does not provide control access')
+
+    def open(self, uri):
+        """open media from URI and start playback"""
+        try:
+            self.player.OpenUri(uri)
+        except AttributeError as ex:
+            raise UnsupportedOperation(
+                f'{self.name} does not support opening URIs') from ex
+
+    def next(self):
+        self._assert_control()
+        if not self.player.CanGoNext:
+            raise UnsupportedOperation(
+                f'{self.name} does not support switching to next track')
+        self.player.Next()
+
+    def previous(self):
+        self._assert_control()
+        if not self.player.CanGoPrevious:
+            raise UnsupportedOperation(
+                f'{self.name} does not support switching to previous track')
+        self.player.Previous()
+
+    def pause(self):
+        self._assert_control()
+        if not self.player.CanPause:
+            raise UnsupportedOperation(
+                f'{self.name} does not support pausing')
+        self.player.Pause()
+
+    def play(self):
+        self._assert_control()
+        if not self.player.CanPlay:
+            raise UnsupportedOperation(
+                f'{self.name} does not support playing')
+        self.player.Play()
+
+    def stop(self):
+        self._assert_control()
+        self.player.Stop()
+
+    def toggle(self):
+        self._assert_control()
+        if not self.player.CanPause:
+            raise UnsupportedOperation(
+                f'{self.name} does not support pausing')
+        self.player.PlayPause()
+
 
 def get_services():
     """Get the list of available MPRIS2 services
@@ -89,17 +147,96 @@ def track_length_string(length):
     return str(timedelta(microseconds=length))
 
 
-def _list_commands():
-    print("The following commands are supported:")
-    print("\tstatus\tshow player status")
-    print("\ttoggle\ttoggle play/pause state")
-    print("\tstop\tstop playback")
-    print("\tplay\tstart playback")
-    print("\tpause\tpause playback")
-    print("\tnext\tplay next track")
-    print("\tprev[ious]\tplay previous track")
-    print("\topen URI\topen media from URI and start playback")
-    print("\tservices\tlist available players")
+def _next(args):
+    """play next track"""
+    args.service.next()
+
+
+def _open(args):
+    """open media from URI and start playback"""
+    p = Path(args.uri)
+    if p.is_file():
+        uri = p.resolve().as_uri()
+    else:
+        # hope the user has provided a valid URI
+        uri = args.uri
+
+    print(f'opening {uri}')
+    args.service.open(uri)
+
+
+def _pause(args):
+    """pause playback"""
+    args.service.pause()
+
+
+def _play(args):
+    """start playback"""
+    args.service.play()
+
+
+def _prev(args):
+    """play previous track"""
+    args.service.previous()
+
+
+def _services(args):
+    """list available services"""
+    # TODO: services is global, works but bad style
+    for i, s in enumerate(services):
+        print(f'{i}: {s}')
+        if args.verbose:
+            service = MprisService(s)
+            print(f'  playlists support:\t{bool(service.playlists)}')
+            print(f'  tracklist support:\t{bool(service.tracklist)}')
+            prop = service.base_properties()
+            for s in prop.keys():
+                print(f'  {s}\t= {prop.get(s)}')
+
+
+def _status(args):
+    """show player status"""
+    status = args.service.player.PlaybackStatus
+    if status not in {'Playing', 'Paused'}:
+        print(status)
+        return
+
+    meta = args.service.player.Metadata
+    try:
+        pos = args.service.player.Position
+    except gi.repository.GLib.GError as ex:
+        if 'org.freedesktop.DBus.Error.NotSupported' in ex.message:
+            # player doesn't suport position request
+            pos = None
+        else:
+            print('Error while retrieving playback position!',
+                  file=sys.stderr)
+            raise
+    # length might not be defined, e.g. in case of a live stream
+    length = meta.get('mpris:length')
+    len_str = ''
+    if length:
+        pos_str = track_length_string(pos) if pos else '???'
+        len_str = f'({pos_str}/{track_length_string(length)})'
+    title = meta.get('xesam:title') or meta.get('xesam:url')
+    artist = '[Unknown]'
+    artists = meta.get('xesam:artist')
+    if artists:
+        artists = deque(artists)
+        artist = artists.popleft()
+        while len(artists) > 0:
+            artist = artist + ', ' + artists.popleft()
+    print(f'{status}: "{title}" by {artist} {len_str}')
+
+
+def _stop(args):
+    """stop playback"""
+    args.service.stop()
+
+
+def _toggle(args):
+    """toggle play/pause state"""
+    args.service.toggle()
 
 
 def _open_service(services, select):
@@ -110,14 +247,14 @@ def _open_service(services, select):
         no = int(select)
         service = MprisService(services[no])
     except IndexError:
-        print(f'MPRIS2 service no. {no} not found.')
+        raise ValueError(f'MPRIS2 service no. {no} not found')
     except ValueError:
         # no number provided, try name matching
         for s in services:
             if s.endswith(select):
                 service = MprisService(s)
         if service is None:
-            print(f'MPRIS2 service "{args.service}" not found.')
+            raise ValueError(f'MPRIS2 service "{select}" not found')
     return service
 
 
@@ -128,24 +265,38 @@ if __name__ == "__main__":
     # get available services via dbus
     services = get_services()
 
+    def mpris_service(s):
+        return _open_service(services, s)
+
     parser = argparse.ArgumentParser(description="Manage an MPRIS2 "
                                      "compatible music player")
-    parser.add_argument("command",
-                        help='player command to execute, default: "status"',
-                        nargs="?", default="status",
-                        choices=('status', 'toggle', 'stop', 'play', 'pause',
-                                 'next', 'prev', 'open', 'services'))
-    parser.add_argument("args", help='arguments for the command, if any',
-                        nargs="*")
     service_arg = parser.add_argument(
-        '-s', '--service', default=services[0],
+        '-s', '--service', default=services[0], type=mpris_service,
         help='Access the specified service, either by number as provided '
         'by the "services" command, or by name. Names are matched from the '
         f'end, so the last part is enough. default: {services[0]}')
     parser.add_argument("-v", "--verbose", action="store_true",
                         help='enable extra output, useful for debugging')
-    parser.add_argument("--commands", action="store_true",
-                        help='list supported commands, then exit')
+    subparsers = parser.add_subparsers(description='What to do?')
+    subparsers.add_parser(
+        'next', help=_next.__doc__).set_defaults(func=_next)
+    subparsers.add_parser(
+        'pause', help=_pause.__doc__).set_defaults(func=_pause)
+    subparsers.add_parser(
+        'play', help=_play.__doc__).set_defaults(func=_play)
+    subparsers.add_parser(
+        'prev', help=_prev.__doc__).set_defaults(func=_prev)
+    subparsers.add_parser(
+        'services', help=_services.__doc__).set_defaults(func=_services)
+    subparsers.add_parser(
+        'status', help=_status.__doc__).set_defaults(func=_status)
+    subparsers.add_parser(
+        'stop', help=_stop.__doc__).set_defaults(func=_stop)
+    subparsers.add_parser(
+        'toggle', help=_toggle.__doc__).set_defaults(func=_toggle)
+    parser_open = subparsers.add_parser('open', help=_open.__doc__)
+    parser_open.set_defaults(func=_open)
+    parser_open.add_argument('uri', help='file or URI to open')
 
     # enable bash completion if argcomplete is available
     try:
@@ -158,37 +309,15 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if (args.commands):
-        _list_commands()
-        exit(0)
-
-    # if the command is "services", list available services and exit
-    if (args.command == "services"):
-        for i, s in enumerate(services):
-            print(f'{i}: {s}')
-            if args.verbose:
-                service = _open_service(services, s)
-                print(f'  playlists support:\t{bool(service.playlists)}')
-                print(f'  tracklist support:\t{bool(service.tracklist)}')
-                prop = service.base_properties()
-                for s in prop.keys():
-                    print(f'  {s}\t= {prop.get(s)}')
-        exit(0)
-
-    # try to access the service via dbus
-    service = _open_service(services, args.service)
-    if not service:
-        exit(1)
-
     if args.verbose:
-        print("selected service", service.name)
-        print(f'  playlists support:\t{bool(service.playlists)}')
-        print(f'  tracklist support:\t{bool(service.tracklist)}')
-        prop = service.base_properties()
+        print("selected service", args.service.name)
+        print(f'  playlists support:\t{bool(args.service.playlists)}')
+        print(f'  tracklist support:\t{bool(args.service.tracklist)}')
+        prop = args.service.base_properties()
         for s in prop.keys():
             print(f'  {s}\t= {prop.get(s)}')
         print("player properties:")
-        prop = service.player_properties()
+        prop = args.service.player_properties()
         for k, v in prop.items():
             if k == 'Metadata':
                 print('  current track metadata:')
@@ -197,95 +326,8 @@ if __name__ == "__main__":
             else:
                 print(f'  {k}\t= {v}')
 
-    # regular commands: run and exit
-    if (args.command == "status"):
-        status = service.player.PlaybackStatus
-        if status == 'Playing' or status == 'Paused':
-            meta = service.player.Metadata
-            try:
-                pos = service.player.Position
-            except gi.repository.GLib.GError as ex:
-                if 'org.freedesktop.DBus.Error.NotSupported' in ex.message:
-                    # player doesn't suport position request
-                    pos = None
-                else:
-                    print('Error while retrieving playback position!',
-                          file=sys.stderr)
-                    raise
-            # length might not be defined, e.g. in case of a live stream
-            length = meta.get('mpris:length')
-            len_str = ''
-            if length:
-                pos_str = track_length_string(pos) if pos else '???'
-                len_str = f'({pos_str}/{track_length_string(length)})'
-            title = meta.get('xesam:title') or meta.get('xesam:url')
-            artist = '[Unknown]'
-            artists = meta.get('xesam:artist')
-            if artists:
-                artists = deque(artists)
-                artist = artists.popleft()
-                while len(artists) > 0:
-                    artist = artist + ', ' + artists.popleft()
-            print(f'{status}: "{title}" by {artist} {len_str}')
-        else:
-            print(status)
-
-    # check if the player allows control commands before attempting any
-    elif not service.player.CanControl:
-        print(f'Player {service.name} does not provide control access.')
-        exit(1)
-
-    elif (args.command == "toggle"):
-        if service.player.CanPause:
-            service.player.PlayPause()
-        else:
-            print("not supported")
-            exit(2)
-
-    elif (args.command == "stop"):
-        # for some reason, there's no 'CanStop' property
-        service.player.Stop()
-
-    elif (args.command == "play"):
-        if service.player.CanPlay:
-            service.player.Play()
-        else:
-            print("not supported")
-            exit(2)
-
-    elif (args.command == "next"):
-        if service.player.CanGoNext:
-            service.player.Next()
-        else:
-            print("not supported")
-            exit(2)
-
-    elif (args.command == "prev" or args.command == "previous"):
-        if service.player.CanGoPrevious:
-            service.player.Previous()
-        else:
-            print("not supported")
-            exit(2)
-
-    elif (args.command == "pause"):
-        if service.player.CanPause:
-            service.player.Pause()
-        else:
-            print("not supported")
-            exit(2)
-
-    elif (args.command == "open"):
-        try:
-            print(f'opening {args.args[0]}')
-            service.player.OpenUri(args.args[0])
-        except gi.repository.GLib.GError as ex:
-            if 'org.freedesktop.DBus.Error.NotSupported' in ex.message:
-                print(f'Error: Service {service.name} does not support '
-                      'opening URIs via MPRIS2.')
-            else:
-                print('Unexpected error!')
-                raise
-
-    else:
-        print("unknown command:", args.command)
-        exit(1)
+    try:
+        args.func(args)
+    except UnsupportedOperation as ex:
+        print(ex, file=sys.stderr)
+        sys.exit(2)
