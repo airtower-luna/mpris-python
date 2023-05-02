@@ -268,6 +268,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-v', '--verbose', action='store_true',
         help='enable extra output, useful for debugging')
+    parser.set_defaults(func=_status)
     subparsers = parser.add_subparsers(description='What to do?')
     subparsers.add_parser(
         'services', help=_services.__doc__).set_defaults(
