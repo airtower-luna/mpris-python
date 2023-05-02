@@ -24,6 +24,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import functools
 import gi.repository
 import pydbus
 import sys
@@ -180,9 +181,8 @@ def _prev(args):
     args.service.previous()
 
 
-def _services(args):
+def _services(args, services):
     """list available services"""
-    # TODO: services is global, works but bad style
     for i, s in enumerate(services):
         print(f'{i}: {s}')
         if args.verbose:
@@ -287,7 +287,8 @@ if __name__ == "__main__":
     subparsers.add_parser(
         'prev', help=_prev.__doc__).set_defaults(func=_prev)
     subparsers.add_parser(
-        'services', help=_services.__doc__).set_defaults(func=_services)
+        'services', help=_services.__doc__).set_defaults(
+            func=functools.partial(_services, services=services))
     subparsers.add_parser(
         'status', help=_status.__doc__).set_defaults(func=_status)
     subparsers.add_parser(
