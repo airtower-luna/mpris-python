@@ -37,10 +37,11 @@ _COMMANDS = dict()
 
 
 def _auto_control(func):
+    @functools.wraps(func)
     def auto_func(args):
         func(args.service)
-    auto_func.__doc__ = func.__doc__
     _COMMANDS[func.__name__] = auto_func
+    return func
 
 
 class UnsupportedOperation(Exception):
