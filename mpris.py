@@ -248,7 +248,7 @@ def _open_service(services, select):
     return service
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import argparse
 
     # get available services via dbus
@@ -257,15 +257,16 @@ if __name__ == "__main__":
     def mpris_service(s):
         return _open_service(services, s)
 
-    parser = argparse.ArgumentParser(description="Manage an MPRIS2 "
-                                     "compatible music player")
+    parser = argparse.ArgumentParser(
+        description='Manage an MPRIS2 compatible music player')
     service_arg = parser.add_argument(
         '-s', '--service', default=services[0], type=mpris_service,
         help='Access the specified service, either by number as provided '
         'by the "services" command, or by name. Names are matched from the '
         f'end, so the last part is enough. default: {services[0]}')
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help='enable extra output, useful for debugging')
+    parser.add_argument(
+        '-v', '--verbose', action='store_true',
+        help='enable extra output, useful for debugging')
     subparsers = parser.add_subparsers(description='What to do?')
     subparsers.add_parser(
         'services', help=_services.__doc__).set_defaults(
@@ -291,13 +292,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.verbose:
-        print("selected service", args.service.name)
+        print('selected service', args.service.name)
         print(f'  playlists support:\t{bool(args.service.playlists)}')
         print(f'  tracklist support:\t{bool(args.service.tracklist)}')
         prop = args.service.base_properties()
         for s in prop.keys():
             print(f'  {s}\t= {prop.get(s)}')
-        print("player properties:")
+        print('player properties:')
         prop = args.service.player_properties()
         for k, v in prop.items():
             if k == 'Metadata':
