@@ -4,7 +4,7 @@
 
 # The MIT License (MIT)
 #
-# Copyright (c) 2015-2021 Fiona Klute
+# Copyright (c) 2015-2023 Fiona Klute
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import dbus
+import gi.repository
+import pydbus
 import sys
 from datetime import timedelta
 
@@ -41,28 +42,21 @@ class MprisService:
 
     def __init__(self, servicename):
         """Initialize an MprisService object for the specified service name"""
-        bus = dbus.SessionBus()
+        bus = pydbus.SessionBus()
         self.name = servicename
-        self.proxy = bus.get_object(self.name, '/org/mpris/MediaPlayer2')
-        self.player = dbus.Interface(
-            self.proxy, dbus_interface=self.player_interface)
-        # tracklist is an optional interface, may be None depending on service
-        self.tracklist = dbus.Interface(
-            self.proxy, dbus_interface=self.tracklist_interface)
-        # playlists is an optional interface, may be None depending on service
-        self.playlists = dbus.Interface(
-            self.proxy, dbus_interface=self.playlists_interface)
-        self.properties = dbus.Interface(
-            self.proxy, dbus_interface=self.properties_interface)
-        # check if optional interfaces are available
+        self._proxy = bus.get(self.name, '/org/mpris/MediaPlayer2')
+        self.player = self._proxy[self.player_interface]
+        self.properties = self._proxy[self.properties_interface]
+        # tracklist is an optional interface
         try:
-            self.get_playlists_property('PlaylistCount')
-        except dbus.exceptions.DBusException:
-            self.playlists = None
-        try:
-            self.get_tracklist_property('CanEditTracks')
-        except dbus.exceptions.DBusException:
+            self.tracklist = self._proxy[self.tracklist_interface]
+        except KeyError:
             self.tracklist = None
+        # playlists is an optional interface
+        try:
+            self.playlists = self._proxy[self.playlists_interface]
+        except KeyError:
+            self.playlists = None
 
     def base_properties(self):
         """Get all basic service properties"""
@@ -72,18 +66,6 @@ class MprisService:
         """Get all player properties"""
         return self.properties.GetAll(self.player_interface)
 
-    def get_player_property(self, name):
-        """Get the player property described by name"""
-        return self.properties.Get(self.player_interface, name)
-
-    def get_playlists_property(self, name):
-        """Get the playlists property described by name"""
-        return self.properties.Get(self.playlists_interface, name)
-
-    def get_tracklist_property(self, name):
-        """Get the tracklist property described by name"""
-        return self.properties.Get(self.tracklist_interface, name)
-
 
 def get_services():
     """Get the list of available MPRIS2 services
@@ -91,8 +73,8 @@ def get_services():
     :returns: a list of strings
     """
     services = []
-    bus = dbus.SessionBus()
-    for s in bus.list_names():
+    bus = pydbus.SessionBus()
+    for s in bus.get('.DBus').ListNames():
         if s.startswith(MprisService.mpris_base):
             services.append(s)
     return services
@@ -217,14 +199,13 @@ if __name__ == "__main__":
 
     # regular commands: run and exit
     if (args.command == "status"):
-        status = service.get_player_property('PlaybackStatus')
+        status = service.player.PlaybackStatus
         if status == 'Playing' or status == 'Paused':
-            meta = service.get_player_property('Metadata')
+            meta = service.player.Metadata
             try:
-                pos = service.get_player_property('Position')
-            except dbus.exceptions.DBusException as ex:
-                if ex.get_dbus_name() \
-                   == 'org.freedesktop.DBus.Error.NotSupported':
+                pos = service.player.Position
+            except gi.repository.GLib.GError as ex:
+                if 'org.freedesktop.DBus.Error.NotSupported' in ex.message:
                     # player doesn't suport position request
                     pos = None
                 else:
@@ -250,12 +231,12 @@ if __name__ == "__main__":
             print(status)
 
     # check if the player allows control commands before attempting any
-    elif not service.get_player_property('CanControl'):
+    elif not service.player.CanControl:
         print(f'Player {service.name} does not provide control access.')
         exit(1)
 
     elif (args.command == "toggle"):
-        if service.get_player_property('CanPause'):
+        if service.player.CanPause:
             service.player.PlayPause()
         else:
             print("not supported")
@@ -266,28 +247,28 @@ if __name__ == "__main__":
         service.player.Stop()
 
     elif (args.command == "play"):
-        if service.get_player_property('CanPlay'):
+        if service.player.CanPlay:
             service.player.Play()
         else:
             print("not supported")
             exit(2)
 
     elif (args.command == "next"):
-        if service.get_player_property('CanGoNext'):
+        if service.player.CanGoNext:
             service.player.Next()
         else:
             print("not supported")
             exit(2)
 
     elif (args.command == "prev" or args.command == "previous"):
-        if service.get_player_property('CanGoPrevious'):
+        if service.player.CanGoPrevious:
             service.player.Previous()
         else:
             print("not supported")
             exit(2)
 
     elif (args.command == "pause"):
-        if service.get_player_property('CanPause'):
+        if service.player.CanPause:
             service.player.Pause()
         else:
             print("not supported")
@@ -297,13 +278,13 @@ if __name__ == "__main__":
         try:
             print(f'opening {args.args[0]}')
             service.player.OpenUri(args.args[0])
-        except dbus.exceptions.DBusException as ex:
-            if (ex.get_dbus_name().endswith('UnknownMethod')):
+        except gi.repository.GLib.GError as ex:
+            if 'org.freedesktop.DBus.Error.NotSupported' in ex.message:
                 print(f'Error: Service {service.name} does not support '
                       'opening URIs via MPRIS2.')
             else:
-                print('Unexpected error:', ex)
-            exit(1)
+                print('Unexpected error!')
+                raise
 
     else:
         print("unknown command:", args.command)

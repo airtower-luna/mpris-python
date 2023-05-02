@@ -3,10 +3,10 @@
 mpris-python is a simple command line MPRIS2 [1] client which doubles
 as a rudimentary MPRIS client library. It allows you to send commands
 to any MPRIS2 compatible media player from the command line. The
-dbus-python library [2] is used to communicate with the media player.
+pydbus library [2] is used to communicate with the media player.
 
 [1] http://specifications.freedesktop.org/mpris-spec/latest/
-[2] http://dbus.freedesktop.org/doc/dbus-python/
+[2] https://github.com/LEW21/pydbus
 
 === Usage ===
 
