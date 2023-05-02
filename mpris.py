@@ -225,10 +225,7 @@ def _status(args):
     artist = '[Unknown]'
     artists = meta.get('xesam:artist')
     if artists:
-        artists = deque(artists)
-        artist = artists.popleft()
-        while len(artists) > 0:
-            artist = artist + ', ' + artists.popleft()
+        artist = ', '.join(artists)
     print(f'{status}: "{title}" by {artist} {len_str}')
 
 
@@ -253,7 +250,6 @@ def _open_service(services, select):
 
 if __name__ == "__main__":
     import argparse
-    from collections import deque
 
     # get available services via dbus
     services = get_services()
